@@ -1,0 +1,36 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="jianguo.ds.se.hust.com.sudoku.ui.GameFragment">
+
+    <io.codetail.widget.RevealLinearLayout
+        android:id="@+id/frame"
+        android:layout_width="match_parent"
+        android:orientation="vertical"
+        android:layout_height="match_parent">
+        <GridView
+            android:layout_margin="@dimen/activity_horizontal_margin"
+            android:layout_weight="1"
+            android:id="@+id/gv_sudoku"
+            android:numColumns="9"
+            android:listSelector="@android:color/transparent"
+            android:gravity="center"
+            android:stretchMode="columnWidth"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </GridView>
+
+        <GridView
+            android:layout_margin="@dimen/activity_horizontal_margin"
+            android:layout_weight="7"
+            android:id="@+id/gv_number"
+            android:numColumns="9"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </GridView>
+
+    </io.codetail.widget.RevealLinearLayout>
+
+</FrameLayout>

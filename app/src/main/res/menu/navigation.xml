@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group
+        android:id="@+id/grp1"
+        android:checkableBehavior="single">
+        <item
+            android:icon="@drawable/ic_exposure_zero_black_36dp"
+            android:id="@+id/lv_easy"
+            android:checked="false"
+            android:title="Easy"/>
+        <item
+            android:icon="@drawable/ic_exposure_plus_1_black_36dp"
+            android:id="@+id/lv_mid"
+            android:checked="false"
+            android:title="Medium"/>
+        <item
+            android:icon="@drawable/ic_exposure_plus_2_black_36dp"
+            android:id="@+id/lv_hard"
+            android:checked="false"
+            android:title="Hard"/>
+    </group>
+    <group
+        android:id="@+id/grp2"
+        android:checkableBehavior="single">
+        <item
+            android:icon="@drawable/ic_settings_black_36dp"
+            android:id="@+id/setting"
+            android:checked="false"
+            android:title="Settings"/>
+    </group>
+
+</menu>
