@@ -4,6 +4,7 @@ package jianguo.ds.se.hust.com.sudoku.ui;
 import android.animation.Animator;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
+import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.ColorInt;
@@ -16,10 +17,13 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Stack;
 
 import io.codetail.animation.ViewAnimationUtils;
@@ -50,10 +54,12 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
     private View mCurrSelectedView;
     private SudokuCell mCurrCell;
     SudokuAdapter sudokuAdapter;
+    NumberAdapter numberAdapter;
+
     private Stack<Integer> mCurrPos;
     private int pos;
 
-    private SudokuGenerator generater;
+    SudokuGenerator generator;
 
     public GameFragment() {
 
@@ -80,17 +86,17 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
         if (getArguments() != null) {
             mLv = getArguments().getString(ARG_LEVEL);
             mCurrPos = new Stack<>();
-            generater = new SudokuGenerator();
-            generater.setBlockSize(3);
+            generator = new SudokuGenerator();
+            generator.setBlockSize(3);
             switch (mLv) {
                 case "easy":
-                    generater.generateProblems(SudokuGenerator.Level.EASY);
+                    generator.generateProblems(SudokuGenerator.Level.EASY);
                     break;
                 case "mid":
-                    generater.generateProblems(SudokuGenerator.Level.MID);
+                    generator.generateProblems(SudokuGenerator.Level.MID);
                     break;
                 case "hard":
-                    generater.generateProblems(SudokuGenerator.Level.HARD);
+                    generator.generateProblems(SudokuGenerator.Level.HARD);
                     break;
                 default:
                     throw new IllegalArgumentException("Invalid level");
@@ -102,13 +108,13 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              Bundle savedInstanceState) {
         if (C.DEBUG) {
             LogUtil.log(mLv);
         }
 
-        View view;
+        final View view;
         if (Build.VERSION_CODES.LOLLIPOP > Build.VERSION.SDK_INT) {
             view = inflater.inflate(R.layout.fragment_game, container, false);
             frame = (RevealLinearLayout) view.findViewById(R.id.frame);
@@ -120,7 +126,7 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
         sudoku = (GridView) view.findViewById(R.id.gv_sudoku);
         number = (GridView) view.findViewById(R.id.gv_number);
 
-        sudokuAdapter = new SudokuAdapter(getActivity(), generater.asList(), generater);
+        sudokuAdapter = new SudokuAdapter(getActivity(), generator.asList(), generator);
         fab = (FloatingActionButton) getActivity().findViewById(R.id.fab_undo);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -138,10 +144,10 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
 
             }
         });
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_list_item_1);
-        adapter.addAll("1", "2", "3", "4", "5", "6", "7", "8", "9");
+        numberAdapter = new NumberAdapter(getActivity(),
+                Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9"));
         initSudoku();
-        number.setAdapter(adapter);
+        number.setAdapter(numberAdapter);
         number.setOnItemClickListener(this);
         return view;
     }
@@ -229,7 +235,7 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
                 mCurrSelectedView.setBackground(getActivity().getResources().getDrawable(R.drawable.item_border));
             }
             mCurrSelectedView = view;
-            mCurrCell = (SudokuCell) parent.getAdapter().getItem(position);
+            mCurrCell = (SudokuCell) sudokuAdapter.getItem(position);
         } else if (parent.getId() == R.id.gv_number) {
             mCurrPos.push(pos);
             if (mCurrSelectedView != null) {
@@ -240,12 +246,12 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
                         return;
                     }
                     TextView tv = (TextView) mCurrSelectedView;
-                    tv.setText(parent.getAdapter().getItem(position) + "");
+                    tv.setText(numberAdapter.getItem(position) + "");
                     tv.setTextColor(getResources().getColor(R.color.colorAccent));
                     mCurrCell.setValue(Integer.parseInt(parent.getAdapter().getItem(position) + ""));
                     sudokuAdapter.notifyDataSetChanged(mCurrPos.peek());
                     if (C.DEBUG) {
-                        LogUtil.log("input after \n" + generater.toString());
+                        LogUtil.log("input after \n" + generator.toString());
                     }
 
                 }
@@ -260,7 +266,7 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
                 .setAction(getResources().getString(R.string.another_game), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        SudokuGenerator generator = new SudokuGenerator();
+                        generator = new SudokuGenerator();
                         generator.setBlockSize(3);
                         switch (mLv) {
                             case "easy":
@@ -276,8 +282,12 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
                                 throw new IllegalArgumentException("Invalid level");
                         }
                         sudokuAdapter = new SudokuAdapter(getActivity(), generator.asList(), generator);
+                        sudokuAdapter.setOnChangedListener(GameFragment.this);
                         sudoku.setAdapter(sudokuAdapter);
                         sudoku.invalidateViews();
+                        mCurrPos.clear();
+                        mCurrCell = null;
+                        mCurrSelectedView = null;
                     }
                 }).show();
     }
@@ -286,8 +296,8 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
     @Override
     public void onRowError(int row) {
         @ColorInt int red = getResources().getColor(R.color.android_red_dark);
-        for (int i = 0; i < generater.getFieldSize(); i++) {
-            View view = sudoku.getChildAt(row * generater.getFieldSize() + i);
+        for (int i = 0; i < generator.getFieldSize(); i++) {
+            View view = sudoku.getChildAt(row * generator.getFieldSize() + i);
             if (view instanceof TextView) {
                 animateFlashText((TextView) view, ((TextView) view).getCurrentTextColor(), red, false);
             }
@@ -299,7 +309,7 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
     public void onColError(int col) {
         @ColorInt int red = getResources().getColor(R.color.android_red_dark);
         for (int i = 0; i <= col; i++) {
-            View view = sudoku.getChildAt(col + i * generater.getFieldSize());
+            View view = sudoku.getChildAt(col + i * generator.getFieldSize());
             if (view instanceof TextView) {
                 animateFlashText((TextView) view, ((TextView) view).getCurrentTextColor(), red, false);
             }
@@ -310,11 +320,11 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
     @Override
     public void onBlockError(int row, int col) {
         @ColorInt int red = getResources().getColor(R.color.android_red_dark);
-        int left = col / generater.getBlockSize() * 3;
-        int bottom = row / generater.getBlockSize() * 3;
+        int left = col / generator.getBlockSize() * 3;
+        int bottom = row / generator.getBlockSize() * 3;
         for (int i = bottom; i < bottom + 3; i++) {
             for (int j = left; j < left + 3; j++) {
-                View view = sudoku.getChildAt(j + i * generater.getFieldSize());
+                View view = sudoku.getChildAt(j + i * generator.getFieldSize());
                 if (view instanceof TextView) {
                     animateFlashText((TextView) view, ((TextView) view).getCurrentTextColor(), red, false);
                 }
@@ -324,12 +334,34 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
     }
 
     private static void animateFlashText(
-            final TextView textView, @ColorInt int color1, @ColorInt int color2, boolean staySecondColor) {
+            final TextView textView, @ColorInt final int color1, @ColorInt int color2, boolean staySecondColor) {
         ValueAnimator anim = ValueAnimator.ofObject(new ArgbEvaluator(), color1, color2);
         anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
                 textView.setTextColor((Integer) animation.getAnimatedValue());
+            }
+
+        });
+        anim.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                textView.setTextColor(color1);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
             }
         });
         anim.setRepeatMode(ValueAnimator.REVERSE);
@@ -337,5 +369,48 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
         anim.setDuration(250);
         anim.setInterpolator(new AccelerateInterpolator());
         anim.start();
+    }
+
+    class NumberAdapter extends BaseAdapter {
+        List<String> datas;
+        LayoutInflater inflater;
+        public NumberAdapter(Context ctx, List<String> datas) {
+            inflater = LayoutInflater.from(ctx);
+            this.datas = datas;
+        }
+        @Override
+        public int getCount() {
+            return datas.size();
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return datas.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder viewHolder;
+            if (convertView == null) {
+                convertView = inflater.inflate(R.layout.number_item, parent, false);
+                viewHolder = new ViewHolder();
+                viewHolder.tv = (TextView) convertView.findViewById(R.id.number);
+                convertView.setTag(viewHolder);
+            } else {
+                viewHolder = (ViewHolder) convertView.getTag();
+            }
+            String text = datas.get(position);
+            viewHolder.tv.setText(text);
+            return convertView;
+        }
+
+        class ViewHolder {
+            TextView tv;
+        }
     }
 }
