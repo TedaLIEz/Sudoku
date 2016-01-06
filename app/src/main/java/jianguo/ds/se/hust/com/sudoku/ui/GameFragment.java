@@ -365,8 +365,8 @@ public class GameFragment extends BaseFragment implements AdapterView.OnItemClic
             }
         });
         anim.setRepeatMode(ValueAnimator.REVERSE);
-        anim.setRepeatCount(staySecondColor ? 2 : 3);
-        anim.setDuration(250);
+        anim.setRepeatCount(staySecondColor ? 4 : 5);
+        anim.setDuration(400);
         anim.setInterpolator(new AccelerateInterpolator());
         anim.start();
     }
